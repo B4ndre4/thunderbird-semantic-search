@@ -1,0 +1,128 @@
+# config/config.toml — Configuration for Censor Agent and MCP Server
+#
+# IMPORTANT: All paths in this file MUST be absolute.
+# Linux example: /home/user/data/vectordb.lance
+# Windows example: D:/user/data/vectordb.lance or D:\\user\\data\\vectordb.lance
+#
+
+[paths]
+# List of absolute paths to Thunderbird Mbox files.
+mbox_paths = [
+	"C:/Users/myuser/AppData/Roaming/Thunderbird/Profiles/vnsvh42t.default/Mail/pop3.domain.com/my_email_folder_1",
+    "C:/Users/myuser/AppData/Roaming/Thunderbird/Profiles/vnsvh42t.default/Mail/pop3.domain.com/my_email_folder_2"
+    "C:/Users/myuser/AppData/Roaming/Thunderbird/Profiles/vnsvh42t.default/Mail/pop3.domain.com/my_email_folder_3"
+]
+vector_db_path      = "D:/myfolder/thunderbird-semantic-search/data/vectordb.lance"
+state_db_path       = "D:/myfolder/thunderbird-semantic-search/data/state.db"
+fastembed_cache_path= "D:/myfolder/thunderbird-semantic-search/models/fastembed_cache"
+
+[indexing]
+chunk_size      = 200       # Number of tokens per text chunk for embedding
+chunk_overlap   = 20        # Number of overlapping tokens between chunks to preserve context
+embedding_model = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"  # Model used to generate vector embeddings
+collection_name = "emails"  # Name of the collection/table in the vector database
+use_prefix      = false     # Whether to add task-specific prefixes to text before embedding
+
+[search]
+top_n = 10
+
+[email_patterns]
+# Regex patterns for email structure classification
+# Copy patterns for your language from languages.txt
+
+forward_subject = [
+    "^\\s*(fwd?|fw)\\s*:",
+    "^\\s*(re)\\s*:"
+]
+
+forward_body = [
+    "[-]{3,}\\s*(forwarded message|original message|forward)\\s*[-]{3,}",
+    "^>{0,2}\\s*from:\\s+.+",
+    "(forwarded by|sent by)\\b"
+]
+
+thread_reply = [
+    "^>",
+    "^on .+wrote:$"
+]
+
+[llm]
+provider            = "ollama cloud"                        # "ollama", "ollama cloud", or "llama.cpp"
+llamacpp_model_path = "/mnt/d/mia/models/Bonsai-4B.gguf"    # For Llama.cpp local models
+ollama_local_url    = "http://localhost:11434"              # For Ollama local models
+ollama_model        = "cogito-2.1:671b-cloud"
+ollama_api_key      = "12345678901234567890ABCDEFGHILMNOPQRSTUVZ"
+
+# Censor prompt - customize as needed for your use case
+# You can copy and adapt these prompts from languages.txt
+censor_prompt = """Analyze the email below and respond with ONLY ONE WORD: work, private, or mixed.
+
+Subject: {subject}
+From: {from_address}
+Date: {date_iso}
+Body:
+{body}
+
+Rules:
+- "work": exclusively work-related email
+- "private": exclusively personal/private email
+- "mixed": contains both work and personal content
+
+Respond with ONLY one word."""
+
+# Censor extract prompt - customize as needed for your use case
+# You can copy and adapt these prompts from languages.txt
+censor_extract_prompt = """Extract ONLY the substantive work-related content from the email below.
+
+Subject: {subject}
+From: {from_address}
+Body:
+{body}
+
+Rules for extraction:
+- INCLUDE: work tasks, requests, decisions, project updates, deadlines, data, technical content, action items
+- EXCLUDE all of the following, even if work-related:
+  * Greetings and salutations (e.g. "Hi", "Dear", "Good morning", "Hello team", "Hope all is well")
+  * Sign-offs and closings (e.g. "Best regards", "Kind regards", "Thanks", "Cheers", "Warm wishes", "Talk soon")
+  * Personal signatures (name, title, phone, address, company boilerplate)
+  * Legal/confidentiality disclaimers (e.g. "This email and its attachments are confidential", "This message is intended only for the named recipient")
+  * Eco/print reminders (e.g. "Please consider the environment before printing this email", "Think before you print")
+  * Automated footer notices (e.g. "Sent from my iPhone", "This email was sent automatically")
+  * Pleasantries and filler (e.g. "Hope you're doing well", "As per our last conversation", "Further to our call", "As discussed", "Following up on")
+  * Thread/reply separators (e.g. "From: ...", "On [date] wrote:", "-----Original Message-----", ">>> ")
+  * Read receipt or tracking notices
+  * Out-of-office and auto-reply boilerplate (e.g. "I am out of the office until", "I will respond upon my return")
+  * Antivirus/security scan notices (e.g. "This email has been scanned by", "No virus detected")
+  * Broken HTML signature artifacts (e.g. "[image001.png]", links to company social media)
+  * Repeated thread metadata (e.g. "On [date] at [time] [Name] wrote:")
+
+Respond with ONLY the extracted substantive work text, preserving its original wording. If no substantive work content exists, respond with an empty string."""
+
+# Censor clean prompt - customize as needed for your use case
+# You can copy and adapt these prompts from languages.txt
+censor_clean_prompt = """Clean the email text below by removing all sections unrelated to the work subject matter.
+
+Subject: {subject}
+From: {from_address}
+Body:
+{body}
+
+Rules for cleaning:
+- KEEP: work tasks, requests, decisions, project updates, deadlines, data, technical content, action items
+- REMOVE all of the following:
+  * Greetings and salutations (e.g. "Hi", "Dear", "Good morning", "Hello team", "Hope all is well")
+  * Sign-offs and closings (e.g. "Best regards", "Kind regards", "Thanks", "Cheers", "Warm wishes", "Talk soon")
+  * Personal signatures (name, title, phone, address, company boilerplate)
+  * Legal/confidentiality disclaimers (e.g. "This email and its attachments are confidential", "This message is intended only for the named recipient")
+  * Eco/print reminders (e.g. "Please consider the environment before printing this email", "Think before you print")
+  * Automated footer notices (e.g. "Sent from my iPhone", "This email was sent automatically")
+  * Pleasantries and filler (e.g. "Hope you're doing well", "As per our last conversation", "Further to our call", "As discussed", "Following up on")
+  * Thread/reply separators (e.g. "From: ...", "On [date] wrote:", "-----Original Message-----", ">>> ")
+  * Read receipt or tracking notices
+  * Out-of-office and auto-reply boilerplate (e.g. "I am out of the office until", "I will respond upon my return")
+  * Antivirus/security scan notices (e.g. "This email has been scanned by", "No virus detected")
+  * Broken HTML signature artifacts (e.g. "[image001.png]", links to company social media)
+  * Repeated thread metadata (e.g. "On [date] at [time] [Name] wrote:")
+
+Respond with ONLY the cleaned text, preserving its original wording. If no content remains after cleaning, respond with an empty string."""
+

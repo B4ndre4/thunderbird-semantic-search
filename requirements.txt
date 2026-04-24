@@ -1,0 +1,11 @@
+# Core dependencies - Required for censor_agent.py and mcp_server.py
+lancedb
+fastembed
+ollama
+llama-cpp-python
+mcp
+pyarrow
+
+# Optional utilities dependencies (for utils/)
+click
+rich

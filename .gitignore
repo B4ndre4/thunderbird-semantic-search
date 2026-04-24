@@ -1,0 +1,13 @@
+data/*
+!data/.gitkeep
+models/*
+!models/.gitkeep
+**/__pycache__/
+censor_agent.log
+mcp_server.log
+config/config.toml
+venv/
+test/
+.directory
+opencode.jsonc
+AGENTS.md

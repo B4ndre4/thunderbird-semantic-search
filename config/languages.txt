@@ -1,0 +1,454 @@
+
+LANGUAGE: ITALIAN (IT)
+================================================================================
+
+[PATTERNS]
+
+forward_subject = [
+    "^\\s*(fwd?|fw|i|inoltro)\\s*:",
+    "^\\s*(r|re)\\s*:"
+]
+
+forward_body = [
+    "[-]{3,}\\s*(messaggio inoltrato|forwarded message|original message|forward)\\s*[-]{3,}",
+    "^>{0,2}\\s*(da|from):\\s+.+",
+    "(inoltrato da|forwarded by|inviato da|sent by)\\b"
+]
+
+thread_reply = [
+    "^>",
+    "^(on .+wrote:|il .+ha scritto:)$"
+]
+
+[PROMPTS]
+
+censor_prompt = """Analizza l'email sottostante e rispondi con UNA SOLA PAROLA: lavoro, privata, o mista.
+
+Oggetto: {subject}
+Da: {from_address}
+Data: {date_iso}
+Corpo:
+{body}
+
+Regole:
+- "lavoro": email esclusivamente di natura lavorativa
+- "privata": email esclusivamente personale/privata
+- "mista": contiene sia contenuto lavorativo che personale
+
+Rispondi con UNA SOLA PAROLA."""
+
+censor_extract_prompt = """Estrai SOLO il contenuto lavorativo sostanziale dall'email sottostante.
+
+Oggetto: {subject}
+Da: {from_address}
+Corpo:
+{body}
+
+Regole per l'estrazione:
+- INCLUDI: attività lavorative, richieste, decisioni, aggiornamenti su progetti, scadenze, dati, contenuti tecnici, azioni da intraprendere
+- ESCLUDI tutto quanto segue, anche se di natura lavorativa:
+  * Saluti iniziali (es. "Ciao", "Buongiorno", "Gentile", "Salve", "Buon pomeriggio")
+  * Saluti finali e chiusure (es. "Cordiali saluti", "Distinti saluti", "A presto", "Grazie mille", "Un caro saluto")
+  * Firme personali (nome, titolo, telefono, indirizzo, boilerplate aziendale)
+  * Disclaimer legali e di riservatezza (es. "Questa e-mail e i suoi allegati sono di natura confidenziale", "Il contenuto di questa e-mail è destinato esclusivamente al destinatario")
+  * Avvisi ecologici (es. "Prima di stampare questa e-mail pensa all'ambiente", "Rifletti prima di stampare")
+  * Footer automatici (es. "Inviato da iPhone", "Questa e-mail è stata inviata automaticamente")
+  * Convenevoli e frasi di riempimento (es. "Spero tu stia bene", "Come da nostra conversazione", "In riferimento alla nostra ultima chiamata", "Come anticipato")
+  * Separatori di thread e risposta (es. "Da: ...", "Il giorno [data] ha scritto:", "-----Messaggio originale-----", ">>> ")
+  * Avvisi di ricevuta di ritorno o tracciamento
+  * Boilerplate di fuori ufficio e risposte automatiche (es. "Sono fuori ufficio fino al", "Risponderò al mio rientro")
+  * Avvisi di scansione antivirus (es. "Questa e-mail è stata analizzata da", "Nessun virus rilevato")
+  * Artefatti di firma HTML (es. "[immagine001.png]", link ai social aziendali)
+  * Metadati ripetuti del thread (es. "Il [data] alle [ora] [Nome] ha scritto:")
+
+Rispondi con SOLO il testo lavorativo sostanziale estratto, preservando la formulazione originale. Se non esiste contenuto lavorativo sostanziale, rispondi con una stringa vuota."""
+
+censor_clean_prompt = """Pulisci il testo dell'email sottostante rimuovendo tutte le sezioni non pertinenti all'argomento lavorativo.
+
+Oggetto: {subject}
+Da: {from_address}
+Corpo:
+{body}
+
+Regole per la pulizia:
+- MANTIENI: attività lavorative, richieste, decisioni, aggiornamenti su progetti, scadenze, dati, contenuti tecnici, azioni da intraprendere
+- RIMUOVI tutto quanto segue:
+  * Saluti iniziali (es. "Ciao", "Buongiorno", "Gentile", "Salve", "Buon pomeriggio")
+  * Saluti finali e chiusure (es. "Cordiali saluti", "Distinti saluti", "A presto", "Grazie mille", "Un caro saluto")
+  * Firme personali (nome, titolo, telefono, indirizzo, boilerplate aziendale)
+  * Disclaimer legali e di riservatezza (es. "Questa e-mail e i suoi allegati sono di natura confidenziale", "Il contenuto di questa e-mail è destinato esclusivamente al destinatario")
+  * Avvisi ecologici (es. "Prima di stampare questa e-mail pensa all'ambiente", "Rifletti prima di stampare")
+  * Footer automatici (es. "Inviato da iPhone", "Questa e-mail è stata inviata automaticamente")
+  * Convenevoli e frasi di riempimento (es. "Spero tu stia bene", "Come da nostra conversazione", "In riferimento alla nostra ultima chiamata", "Come anticipato")
+  * Separatori di thread e risposta (es. "Da: ...", "Il giorno [data] ha scritto:", "-----Messaggio originale-----", ">>> ")
+  * Avvisi di ricevuta di ritorno o tracciamento
+  * Boilerplate di fuori ufficio e risposte automatiche (es. "Sono fuori ufficio fino al", "Risponderò al mio rientro")
+  * Avvisi di scansione antivirus (es. "Questa e-mail è stata analizzata da", "Nessun virus rilevato")
+  * Artefatti di firma HTML (es. "[immagine001.png]", link ai social aziendali)
+  * Metadati ripetuti del thread (es. "Il [data] alle [ora] [Nome] ha scritto:")
+
+Rispondi con SOLO il testo pulito, preservando la formulazione originale. Se dopo la pulizia non rimane alcun contenuto, rispondi con una stringa vuota."""
+
+================================================================================
+LANGUAGE: ENGLISH (EN)
+================================================================================
+
+[PATTERNS]
+
+forward_subject = [
+    "^\\s*(fwd?|fw)\\s*:",
+    "^\\s*(re)\\s*:"
+]
+
+forward_body = [
+    "[-]{3,}\\s*(forwarded message|original message|forward)\\s*[-]{3,}",
+    "^>{0,2}\\s*from:\\s+.+",
+    "(forwarded by|sent by)\\b"
+]
+
+thread_reply = [
+    "^>",
+    "^on .+wrote:$"
+]
+
+[PROMPTS]
+
+censor_prompt = """Analyze the email below and respond with ONLY ONE WORD: work, private, or mixed.
+
+Subject: {subject}
+From: {from_address}
+Date: {date_iso}
+Body:
+{body}
+
+Rules:
+- "work": exclusively work-related email
+- "private": exclusively personal/private email
+- "mixed": contains both work and personal content
+
+Respond with ONLY one word."""
+
+censor_extract_prompt = """Extract ONLY the substantive work-related content from the email below.
+
+Subject: {subject}
+From: {from_address}
+Body:
+{body}
+
+Rules for extraction:
+- INCLUDE: work tasks, requests, decisions, project updates, deadlines, data, technical content, action items
+- EXCLUDE all of the following, even if work-related:
+  * Greetings and salutations (e.g. "Hi", "Dear", "Good morning", "Hello team", "Hope all is well")
+  * Sign-offs and closings (e.g. "Best regards", "Kind regards", "Thanks", "Cheers", "Warm wishes", "Talk soon")
+  * Personal signatures (name, title, phone, address, company boilerplate)
+  * Legal/confidentiality disclaimers (e.g. "This email and its attachments are confidential", "This message is intended only for the named recipient")
+  * Eco/print reminders (e.g. "Please consider the environment before printing this email", "Think before you print")
+  * Automated footer notices (e.g. "Sent from my iPhone", "This email was sent automatically")
+  * Pleasantries and filler (e.g. "Hope you're doing well", "As per our last conversation", "Further to our call", "As discussed", "Following up on")
+  * Thread/reply separators (e.g. "From: ...", "On [date] wrote:", "-----Original Message-----", ">>> ")
+  * Read receipt or tracking notices
+  * Out-of-office and auto-reply boilerplate (e.g. "I am out of the office until", "I will respond upon my return")
+  * Antivirus/security scan notices (e.g. "This email has been scanned by", "No virus detected")
+  * Broken HTML signature artifacts (e.g. "[image001.png]", links to company social media)
+  * Repeated thread metadata (e.g. "On [date] at [time] [Name] wrote:")
+
+Respond with ONLY the extracted substantive work text, preserving its original wording. If no substantive work content exists, respond with an empty string."""
+
+censor_clean_prompt = """Clean the email text below by removing all sections unrelated to the work subject matter.
+
+Subject: {subject}
+From: {from_address}
+Body:
+{body}
+
+Rules for cleaning:
+- KEEP: work tasks, requests, decisions, project updates, deadlines, data, technical content, action items
+- REMOVE all of the following:
+  * Greetings and salutations (e.g. "Hi", "Dear", "Good morning", "Hello team", "Hope all is well")
+  * Sign-offs and closings (e.g. "Best regards", "Kind regards", "Thanks", "Cheers", "Warm wishes", "Talk soon")
+  * Personal signatures (name, title, phone, address, company boilerplate)
+  * Legal/confidentiality disclaimers (e.g. "This email and its attachments are confidential", "This message is intended only for the named recipient")
+  * Eco/print reminders (e.g. "Please consider the environment before printing this email", "Think before you print")
+  * Automated footer notices (e.g. "Sent from my iPhone", "This email was sent automatically")
+  * Pleasantries and filler (e.g. "Hope you're doing well", "As per our last conversation", "Further to our call", "As discussed", "Following up on")
+  * Thread/reply separators (e.g. "From: ...", "On [date] wrote:", "-----Original Message-----", ">>> ")
+  * Read receipt or tracking notices
+  * Out-of-office and auto-reply boilerplate (e.g. "I am out of the office until", "I will respond upon my return")
+  * Antivirus/security scan notices (e.g. "This email has been scanned by", "No virus detected")
+  * Broken HTML signature artifacts (e.g. "[image001.png]", links to company social media)
+  * Repeated thread metadata (e.g. "On [date] at [time] [Name] wrote:")
+
+Respond with ONLY the cleaned text, preserving its original wording. If no content remains after cleaning, respond with an empty string."""
+
+================================================================================
+LANGUAGE: SPANISH (ES)
+================================================================================
+
+[PATTERNS]
+
+forward_subject = [
+    "^\\s*(rv|reenviado|reenvío)\\s*:",
+    "^\\s*(re)\\s*:"
+]
+
+forward_body = [
+    "[-]{3,}\\s*(mensaje reenviado|mensaje original|reenvío)\\s*[-]{3,}",
+    "^>{0,2}\\s*(de|from):\\s+.+",
+    "(reenviado por|enviado por)\\b"
+]
+
+thread_reply = [
+    "^>",
+    "^el .+escribi[óo]:$"
+]
+
+[PROMPTS]
+
+censor_prompt = """Analiza el siguiente correo electrónico y responde con UNA SOLA PALABRA: trabajo, privado, o mixto.
+
+Asunto: {subject}
+De: {from_address}
+Fecha: {date_iso}
+Cuerpo:
+{body}
+
+Reglas:
+- "trabajo": correo exclusivamente relacionado con el trabajo
+- "privado": correo exclusivamente personal/privado
+- "mixto": contiene tanto contenido laboral como personal
+
+Responde con UNA SOLA PALABRA."""
+
+censor_extract_prompt = """Extrae SOLO el contenido sustancial relacionado con el trabajo del siguiente correo electrónico.
+
+Asunto: {subject}
+De: {from_address}
+Cuerpo:
+{body}
+
+Reglas para la extracción:
+- INCLUYE: tareas de trabajo, solicitudes, decisiones, actualizaciones de proyectos, plazos, datos, contenido técnico, acciones a realizar
+- EXCLUYE todo lo siguiente, incluso si está relacionado con el trabajo:
+  * Saludos (p.ej. "Hola", "Estimado", "Buenos días", "Espero que estés bien")
+  * Despedidas (p.ej. "Saludos cordiales", "Atentamente", "Gracias", "Un saludo")
+  * Firmas personales (nombre, título, teléfono, dirección, texto estándar de la empresa)
+  * Descargos legales y de confidencialidad (p.ej. "Este correo y sus adjuntos son confidenciales")
+  * Avisos ecológicos (p.ej. "Por favor, piensa en el medio ambiente antes de imprimir")
+  * Avisos automáticos (p.ej. "Enviado desde mi iPhone", "Este correo se envió automáticamente")
+  * Frases de cortesía y relleno (p.ej. "Espero que te encuentres bien", "Según nuestra conversación", "Como se discutió")
+  * Separadores de hilo/respuesta (p.ej. "De: ...", "El [fecha] escribió:", "-----Mensaje original-----", ">>> ")
+  * Avisos de confirmación de lectura o seguimiento
+  * Respuestas automáticas y mensajes fuera de oficina (p.ej. "Estoy fuera de la oficina hasta", "Responderé a mi regreso")
+  * Avisos de análisis antivirus (p.ej. "Este correo ha sido analizado por", "No se detectaron virus")
+  * Artefactos HTML de firma (p.ej. "[imagen001.png]", enlaces a redes sociales de la empresa)
+  * Metadatos repetidos del hilo (p.ej. "El [fecha] a las [hora] [Nombre] escribió:")
+
+Responde SOLO con el texto sustancial relacionado con el trabajo extraído, preservando su redacción original. Si no existe contenido sustancial, responde con una cadena vacía."""
+
+censor_clean_prompt = """Limpia el texto del correo electrónico eliminando todas las secciones no relacionadas con el tema laboral.
+
+Asunto: {subject}
+De: {from_address}
+Cuerpo:
+{body}
+
+Reglas para la limpieza:
+- MANTIENE: tareas de trabajo, solicitudes, decisiones, actualizaciones de proyectos, plazos, datos, contenido técnico, acciones a realizar
+- ELIMINA todo lo siguiente:
+  * Saludos (p.ej. "Hola", "Estimado", "Buenos días", "Espero que estés bien")
+  * Despedidas (p.ej. "Saludos cordiales", "Atentamente", "Gracias", "Un saludo")
+  * Firmas personales (nombre, título, teléfono, dirección, texto estándar de la empresa)
+  * Descargos legales y de confidencialidad (p.ej. "Este correo y sus adjuntos son confidenciales")
+  * Avisos ecológicos (p.ej. "Por favor, piensa en el medio ambiente antes de imprimir")
+  * Avisos automáticos (p.ej. "Enviado desde mi iPhone", "Este correo se envió automáticamente")
+  * Frases de cortesía y relleno (p.ej. "Espero que te encuentres bien", "Según nuestra conversación", "Como se discutió")
+  * Separadores de hilo/respuesta (p.ej. "De: ...", "El [fecha] escribió:", "-----Mensaje original-----", ">>> ")
+  * Avisos de confirmación de lectura o seguimiento
+  * Respuestas automáticas y mensajes fuera de oficina (p.ej. "Estoy fuera de la oficina hasta", "Responderé a mi regreso")
+  * Avisos de análisis antivirus (p.ej. "Este correo ha sido analizado por", "No se detectaron virus")
+  * Artefactos HTML de firma (p.ej. "[imagen001.png]", enlaces a redes sociales de la empresa)
+  * Metadatos repetidos del hilo (p.ej. "El [fecha] a las [hora] [Nombre] escribió:")
+
+Responde SOLO con el texto limpio, preservando su redacción original. Si no queda contenido después de la limpieza, responde con una cadena vacía."""
+
+================================================================================
+LANGUAGE: GERMAN (DE)
+================================================================================
+
+[PATTERNS]
+
+forward_subject = [
+    "^\\s*(weitergeleitet|wg|fwd?)\\s*:",
+    "^\\s*(aw)\\s*:"
+]
+
+forward_body = [
+    "[-]{3,}\\s*(weitergeleitete nachricht|originalnachricht|weiterleitung)\\s*[-]{3,}",
+    "^>{0,2}\\s*(von|from):\\s+.+",
+    "(weitergeleitet von|gesendet von)\\b"
+]
+
+thread_reply = [
+    "^>",
+    "^am .+schrieb.*:$"
+]
+
+[PROMPTS]
+
+censor_prompt = """Analysiere die folgende E-Mail und antworte mit EINEM EINZIGEN WORT: arbeit, privat oder gemischt.
+
+Betreff: {subject}
+Von: {from_address}
+Datum: {date_iso}
+Inhalt:
+{body}
+
+Regeln:
+- "arbeit": ausschließlich arbeitsbezogene E-Mail
+- "privat": ausschließlich persönliche/private E-Mail
+- "gemischt": enthält sowohl arbeitsbezogene als auch persönliche Inhalte
+
+Antworte mit EINEM EINZIGEN WORT."""
+
+censor_extract_prompt = """Extrahiere NUR den substantiellen arbeitsbezogenen Inhalt aus der folgenden E-Mail.
+
+Betreff: {subject}
+Von: {from_address}
+Inhalt:
+{body}
+
+Regeln für die Extraktion:
+- EINSCHLIESSEN: Arbeitsaufgaben, Anfragen, Entscheidungen, Projektaktualisierungen, Fristen, Daten, technische Inhalte, zu ergreifende Maßnahmen
+- AUSSCHLIESSEN aller folgenden Punkte, auch wenn sie arbeitsbezogen sind:
+  * Begrüßungen (z.B. "Hallo", "Sehr geehrte", "Guten Morgen", "Ich hoffe, es geht dir gut")
+  * Abschiedsformeln (z.B. "Mit freundlichen Grüßen", "Viele Grüße", "Danke", "Bis bald")
+  * Persönliche Signaturen (Name, Titel, Telefon, Adresse, Firmen-Boilerplate)
+  * Rechtliche/Vertraulichkeitshinweise (z.B. "Diese E-Mail und ihre Anhänge sind vertraulich")
+  * Umwelt/Druckhinweise (z.B. "Bitte denken Sie an die Umwelt, bevor Sie diese E-Mail drucken")
+  * Automatische Fußzeilen (z.B. "Von meinem iPhone gesendet", "Diese E-Mail wurde automatisch gesendet")
+  * Höflichkeitsfloskeln (z.B. "Ich hoffe, dir geht es gut", "Laut unserem Gespräch", "Wie besprochen")
+  * Thread/Antwort-Trennzeichen (z.B. "Von: ...", "Am [Datum] schrieb:", "-----Ursprüngliche Nachricht-----", ">>> ")
+  * Lesebestätigungen oder Tracking-Hinweise
+  * Abwesenheitsnotizen und Autoreply-Boilerplate (z.B. "Ich bin bis zum ... außer Haus", "Ich werde nach meiner Rückkehr antworten")
+  * Antivirus-Scan-Hinweise (z.B. "Diese E-Mail wurde gescannt von", "Keine Viren gefunden")
+  * Defekte HTML-Signatur-Artefakte (z.B. "[bild001.png]", Links zu Firmen-Social-Media)
+  * Wiederholte Thread-Metadaten (z.B. "Am [Datum] um [Uhrzeit] schrieb [Name]:")
+
+Antworte NUR mit dem extrahierten arbeitsbezogenen Text, wobei die ursprüngliche Formulierung erhalten bleibt. Wenn kein substantieller arbeitsbezogener Inhalt existiert, antworte mit einer leeren Zeichenkette."""
+
+censor_clean_prompt = """Bereinige den E-Mail-Text, indem du alle Abschnitte entfernst, die nicht mit der Arbeit zu tun haben.
+
+Betreff: {subject}
+Von: {from_address}
+Inhalt:
+{body}
+
+Regeln für die Bereinigung:
+- BEHALTE: Arbeitsaufgaben, Anfragen, Entscheidungen, Projektaktualisierungen, Fristen, Daten, technische Inhalte, zu ergreifende Maßnahmen
+- ENTFERNE alle folgenden Punkte:
+  * Begrüßungen (z.B. "Hallo", "Sehr geehrte", "Guten Morgen", "Ich hoffe, es geht dir gut")
+  * Abschiedsformeln (z.B. "Mit freundlichen Grüßen", "Viele Grüße", "Danke", "Bis bald")
+  * Persönliche Signaturen (Name, Titel, Telefon, Adresse, Firmen-Boilerplate)
+  * Rechtliche/Vertraulichkeitshinweise (z.B. "Diese E-Mail und ihre Anhänge sind vertraulich")
+  * Umwelt/Druckhinweise (z.B. "Bitte denken Sie an die Umwelt, bevor Sie diese E-Mail drucken")
+  * Automatische Fußzeilen (z.B. "Von meinem iPhone gesendet", "Diese E-Mail wurde automatisch gesendet")
+  * Höflichkeitsfloskeln (z.B. "Ich hoffe, dir geht es gut", "Laut unserem Gespräch", "Wie besprochen")
+  * Thread/Antwort-Trennzeichen (z.B. "Von: ...", "Am [Datum] schrieb:", "-----Ursprüngliche Nachricht-----", ">>> ")
+  * Lesebestätigungen oder Tracking-Hinweise
+  * Abwesenheitsnotizen und Autoreply-Boilerplate (z.B. "Ich bin bis zum ... außer Haus", "Ich werde nach meiner Rückkehr antworten")
+  * Antivirus-Scan-Hinweise (z.B. "Diese E-Mail wurde gescannt von", "Keine Viren gefunden")
+  * Defekte HTML-Signatur-Artefakte (z.B. "[bild001.png]", Links zu Firmen-Social-Media)
+  * Wiederholte Thread-Metadaten (z.B. "Am [Datum] um [Uhrzeit] schrieb [Name]:")
+
+Antworte NUR mit dem bereinigten Text, wobei die ursprüngliche Formulierung erhalten bleibt. Wenn nach der Bereinigung kein Inhalt mehr übrig bleibt, antworte mit einer leeren Zeichenkette."""
+
+================================================================================
+LANGUAGE: FRENCH (FR)
+================================================================================
+
+[PATTERNS]
+
+forward_subject = [
+    "^\\s*(tr|transfert|fwd?)\\s*:",
+    "^\\s*(re|ré)\\s*:"
+]
+
+forward_body = [
+    "[-]{3,}\\s*(message transféré|message original|transfert)\\s*[-]{3,}",
+    "^>{0,2}\\s*(de|from)\\s*:\\s+.+",
+    "(transféré par|envoyé par)\\b"
+]
+
+thread_reply = [
+    "^>",
+    "^le .+a écrit.*:$"
+]
+
+[PROMPTS]
+
+censor_prompt = """Analyse l'email ci-dessous et réponds avec UN SEUL MOT : travail, privée, ou mixte.
+
+Objet : {subject}
+De : {from_address}
+Date : {date_iso}
+Corps :
+{body}
+
+Règles :
+- "travail" : email exclusivement lié au travail
+- "privée" : email exclusivement personnel/privé
+- "mixte" : contient à la fois du contenu professionnel et personnel
+
+Réponds avec UN SEUL MOT."""
+
+censor_extract_prompt = """Extrais SEULEMENT le contenu substantiel lié au travail de l'email ci-dessous.
+
+Objet : {subject}
+De : {from_address}
+Corps :
+{body}
+
+Règles pour l'extraction :
+- INCLUS : tâches professionnelles, demandes, décisions, mises à jour de projets, échéances, données, contenu technique, actions à entreprendre
+- EXCLUS tout ce qui suit, même si lié au travail :
+  * Salutations initiales (par ex. "Bonjour", "Cher", "Madame", "Monsieur", "Bonjour à tous")
+  * Formules de politesse et signatures (par ex. "Cordialement", "Bien à vous", "Merci", "Salutations", "À bientôt")
+  * Signatures personnelles (nom, titre, téléphone, adresse, texte standard de l'entreprise)
+  * Clauses de confidentialité légales (par ex. "Ce message et ses pièces jointes sont confidentiels", "Le contenu de cet email est destiné exclusivement au destinataire")
+  * Messages écologiques (par ex. "Pensez à l'environnement avant d'imprimer cet email", "Réfléchissez avant d'imprimer")
+  * Pieds de page automatiques (par ex. "Envoyé depuis mon iPhone", "Cet email a été envoyé automatiquement")
+  * Formules de politesse et phrases de remplissage (par ex. "J'espère que vous allez bien", "Suite à notre conversation", "En référence à notre appel", "Comme convenu", "Pour faire suite à")
+  * Séparateurs de fil/réponse (par ex. "De : ...", "Le [date] a écrit :", "-----Message original-----", ">>> ")
+  * Avis de confirmation de lecture ou de suivi
+  * Messages d'absence et réponses automatiques (par ex. "Je suis absent du bureau jusqu'au", "Je répondrai à mon retour")
+  * Avis d'analyse antivirus (par ex. "Cet email a été analysé par", "Aucun virus détecté")
+  * Artéfacts HTML de signature (par ex. "[image001.png]", liens vers les réseaux sociaux de l'entreprise)
+  * Métadonnées répétées du fil (par ex. "Le [date] à [heure] [Nom] a écrit :")
+
+Réponds avec SEULEMENT le texte lié au travail substantiel extrait, en conservant sa formulation originale. Si aucun contenu substantiel n'existe, réponds avec une chaîne vide."""
+
+censor_clean_prompt = """Nettoie le texte de l'email en supprimant toutes les sections non liées au sujet professionnel.
+
+Objet : {subject}
+De : {from_address}
+Corps :
+{body}
+
+Règles pour le nettoyage :
+- GARDE : tâches professionnelles, demandes, décisions, mises à jour de projets, échéances, données, contenu technique, actions à entreprendre
+- SUPPRIME tout ce qui suit :
+  * Salutations initiales (par ex. "Bonjour", "Cher", "Madame", "Monsieur", "Bonjour à tous")
+  * Formules de politesse et signatures (par ex. "Cordialement", "Bien à vous", "Merci", "Salutations", "À bientôt")
+  * Signatures personnelles (nom, titre, téléphone, adresse, texte standard de l'entreprise)
+  * Clauses de confidentialité légales (par ex. "Ce message et ses pièces jointes sont confidentiels", "Le contenu de cet email est destiné exclusivement au destinataire")
+  * Messages écologiques (par ex. "Pensez à l'environnement avant d'imprimer cet email", "Réfléchissez avant d'imprimer")
+  * Pieds de page automatiques (par ex. "Envoyé depuis mon iPhone", "Cet email a été envoyé automatiquement")
+  * Formules de politesse et phrases de remplissage (par ex. "J'espère que vous allez bien", "Suite à notre conversation", "En référence à notre appel", "Comme convenu", "Pour faire suite à")
+  * Séparateurs de fil/réponse (par ex. "De : ...", "Le [date] a écrit :", "-----Message original-----", ">>> ")
+  * Avis de confirmation de lecture ou de suivi
+  * Messages d'absence et réponses automatiques (par ex. "Je suis absent du bureau jusqu'au", "Je répondrai à mon retour")
+  * Avis d'analyse antivirus (par ex. "Cet email a été analysé par", "Aucun virus détecté")
+  * Artéfacts HTML de signature (par ex. "[image001.png]", liens vers les réseaux sociaux de l'entreprise)
+  * Métadonnées répétées du fil (par ex. "Le [date] à [heure] [Nom] a écrit :")
+
+Réponds avec SEULEMENT le texte nettoyé, en conservant sa formulation originale. Si aucun contenu ne reste après nettoyage, réponds avec une chaîne vide."""

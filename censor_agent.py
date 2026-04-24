@@ -743,6 +743,7 @@ def main() -> None:
     run_end_dt = datetime.now(timezone.utc)
     run_end = run_end_dt.isoformat()
     duration_seconds = (run_end_dt - run_start_dt).total_seconds()
+    avg_time_per_email = duration_seconds / total_processed if total_processed > 0 else 0
 
     # Update state db_path
     state_db.log_run(run_start, run_end, total_processed, total_skipped, total_discarded, total_indexed, total_errors)
@@ -763,10 +764,11 @@ def main() -> None:
     logger.console(f"Total discarded:  {total_discarded}")
     logger.console(f"Total errors:     {total_errors}")
     logger.console(f"Duration:         {duration_seconds:.2f} seconds")
+    logger.console(f"Avg time/email:   {avg_time_per_email:.2f} seconds")
     logger.console("=" * 50)
 
     # Goodbye
-    logger.debug(f"Session ended in {duration_seconds:.2f} seconds")
+    logger.debug(f"Session ended in {duration_seconds:.2f} seconds, avg {avg_time_per_email:.2f}s/email")
     logger.console(f"Session ended in {duration_seconds:.2f} seconds")
 
 

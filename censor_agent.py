@@ -740,6 +740,12 @@ def main() -> None:
             total_indexed += result["indexed"]
             total_errors += result["errors"]
 
+    # Optimize vector store: compact data files and remove old versions
+    logger.console("Optimizing vector store...")
+    logger.debug("Starting vector store optimization (compact files + cleanup old versions)")
+    vector_store.optimize()
+    logger.debug("Vector store optimization completed")
+
     run_end_dt = datetime.now(timezone.utc)
     run_end = run_end_dt.isoformat()
     duration_seconds = (run_end_dt - run_start_dt).total_seconds()

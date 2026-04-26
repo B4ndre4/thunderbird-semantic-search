@@ -1,10 +1,18 @@
 import os
 from dataclasses import dataclass
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
 import lancedb
 import pyarrow as pa
+from lance.dataset import AutoCleanupConfig
+
+# Auto-cleanup periodically removes old LanceDB version manifests during write
+# operations, preventing unbounded disk growth. Every AUTO_CLEANUP_INTERVAL
+# commits, all versions older than AUTO_CLEANUP_OLDER_THAN_SECONDS are deleted.
+AUTO_CLEANUP_INTERVAL = 20
+AUTO_CLEANUP_OLDER_THAN_SECONDS = 0
 
 
 @dataclass
@@ -39,6 +47,25 @@ class VectorStore:
         except (FileNotFoundError, ValueError):
             self._table = None
 
+        self._enable_auto_cleanup()
+
+    def _enable_auto_cleanup(self) -> None:
+        """Enable LanceDB auto-cleanup on the underlying dataset.
+
+        Configures the Lance dataset to automatically remove old version
+        manifests during write operations. The settings persist in the
+        dataset manifest and survive across sessions.
+        """
+        if self._table is None:
+            return
+        lance_ds = self._table.to_lance()
+        lance_ds.optimize.enable_auto_cleanup(
+            AutoCleanupConfig(
+                interval=AUTO_CLEANUP_INTERVAL,
+                older_than_seconds=AUTO_CLEANUP_OLDER_THAN_SECONDS,
+            )
+        )
+
     def _create_table(self, records: list[ChunkRecord]) -> None:
         if not records:
             return
@@ -70,6 +97,7 @@ class VectorStore:
             data=arrow_table,
             mode="create"
         )
+        self._enable_auto_cleanup()
 
     def upsert(self, records: list[ChunkRecord]) -> None:
         if not records:
@@ -160,3 +188,18 @@ class VectorStore:
             for f in files:
                 total += os.path.getsize(os.path.join(root, f))
         return total
+
+    def optimize(self) -> None:
+        """Compact data files and remove all old versions from the vector store.
+
+        Merges small fragment files into larger ones and deletes all version
+        manifests except the latest. Should be called after bulk indexing to
+        reclaim disk space. Uses delete_unverified=True because censor_agent
+        is the sole writer process.
+        """
+        if self._table is None:
+            return
+        self._table.optimize(
+            cleanup_older_than=timedelta(0),
+            delete_unverified=True,
+        )

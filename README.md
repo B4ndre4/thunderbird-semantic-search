@@ -52,8 +52,6 @@ I have approximately 180,000 emails spread across a dozen mbox files covering 11
    python utils/fastembed_download_model.py
    ```
    
-   The choice for multilingual models is not very extensive. If you have many emails, it's better to limit yourself to 384 vector dimensions for better performance.
-
 4. Copy the example configuration:
    ```bash
    cp config/config.example.toml config/config.toml

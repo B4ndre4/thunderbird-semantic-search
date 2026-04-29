@@ -423,6 +423,28 @@ def process_retries(
     logger.console(f"Retrying {len(failed_emails)} failed emails from: {mbox_path.name}")
     logger.debug(f"Retrying {len(failed_emails)} failed emails from: {mbox_path.name}")
 
+    # Create a set of message_ids to search for
+    failed_ids_set = {f[0] for f in failed_emails}
+
+    # Dictionary to store found emails
+    found_emails_dict = {}
+
+    logger.console(f"Scanning mbox to find {len(failed_emails)} failed emails...")
+    logger.debug(f"Starting single-pass scan for {len(failed_emails)} failed emails")
+
+    # Single pass scan of the mbox
+    for email in parse_mbox(mbox_path, None, config):
+        if email.message_id in failed_ids_set:
+            found_emails_dict[email.message_id] = email
+            logger.debug(f"Found email with message_id={email.message_id}")
+            # Stop if all emails found
+            if len(found_emails_dict) == len(failed_ids_set):
+                logger.debug("All failed emails found, stopping scan")
+                break
+
+    logger.console(f"Found {len(found_emails_dict)} of {len(failed_emails)} emails")
+
+    # Process the found emails
     for failed_email in failed_emails:
         message_id = failed_email[0]
         subject = failed_email[1]
@@ -440,7 +462,8 @@ def process_retries(
         logger.console(f"Retrying email {processed}/{len(failed_emails)}: {subject_preview}...")
         logger.debug(f"Retrying email {processed}: message_id={message_id}, previous_error={previous_error}")
 
-        email = get_email_by_message_id(mbox_path, message_id, config)
+        # Retrieve email from dictionary instead of scanning again
+        email = found_emails_dict.get(message_id)
 
         if email is None:
             logger.error(f"ERROR: Could not find email with message_id={message_id} in {mbox_path.name}")
@@ -720,7 +743,6 @@ def main() -> None:
 
     if args.retry:
         # Retry mode: process failed emails for the single target file
-        logger.debug(f"Retry mode: processing {target_files[0]}")
         logger.console(f"Retry mode: processing {target_files[0]}")
         result = process_retries(Path(target_files[0]), config, state_db, llm_provider, embedder, vector_store, logger)
         total_processed = result["processed"]

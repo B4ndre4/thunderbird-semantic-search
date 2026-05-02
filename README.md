@@ -1,6 +1,6 @@
 # Thunderbird Semantic Search
 
-> Index and search your Thunderbird emails using vector embeddings and LLM classification.
+> Index and search your Thunderbird emails using hybrid search (vector embeddings + full-text search) and LLM classification.
 
 ## About
 
@@ -19,6 +19,8 @@ I have approximately 180,000 emails spread across a dozen mbox files covering 11
 - Extract and clean work-related content, removing signatures and boilerplate using configurable LLM prompts
 - Generate vector embeddings using fastembed models
 - Store embeddings in LanceDB for efficient semantic search
+- Full-text search (FTS) on email subjects and content
+- Hybrid search combining semantic similarity and keyword matching via RRF (Reciprocal Rank Fusion)
 - Resume interrupted processing from where it left off (essential for large mbox files that take considerable time to process)
 - MCP server for integration with AI agents (uses stdio transport)
 - Support for multiple LLM providers: Ollama (local), Ollama Cloud, or Llama.cpp
@@ -106,7 +108,7 @@ After processing, you will see statistics like:
 
 ### Running the MCP Server
 
-The MCP server provides semantic search capabilities to AI agents:
+The MCP server provides hybrid search capabilities (semantic + full-text) to AI agents:
 
 ```bash
 python mcp_server.py
@@ -142,8 +144,16 @@ The MCP server must be configured in your chosen AI client. For example, in Anyt
 ```
 
 The server exposes two tools:
-- `search_emails`: Perform semantic search over indexed emails
+- `search_emails`: Perform hybrid search over indexed emails combining vector similarity and full-text search (FTS) using Reciprocal Rank Fusion (RRF)
 - `get_system_status`: Get indexing statistics and configuration info
+
+#### How Hybrid Search Works
+
+When you search for emails, the system combines two approaches:
+1. **Semantic search**: Finds emails with similar meaning using vector embeddings
+2. **Full-text search**: Finds emails matching exact keywords in subject and content
+
+Results are merged using **Reciprocal Rank Fusion (RRF)**, which ranks documents based on their positions in both result sets. This ensures you get relevant results whether you use specific keywords or natural language queries.
 
 ### LLM Recommendations
 

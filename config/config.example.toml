@@ -17,8 +17,8 @@ state_db_path       = "D:/myfolder/thunderbird-semantic-search/data/state.db"
 fastembed_cache_path= "D:/myfolder/thunderbird-semantic-search/models/fastembed_cache"
 
 [indexing]
-chunk_size      = 350       # Number of tokens per text chunk for embedding
-chunk_overlap   = 20        # Number of overlapping tokens between chunks to preserve context
+chunk_size      = 350       # Number of chars per text chunk for embedding
+chunk_overlap   = 50        # Number of overlapping chars between chunks to preserve context
 embedding_model = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"  # Model used to generate vector embeddings
 collection_name = "emails"  # Name of the collection/table in the vector database
 use_prefix      = false     # Whether to add task-specific prefixes to text before embedding

@@ -76,16 +76,27 @@ class VectorStore:
 
         LanceDB FTS requires tantivy and creates an inverted index for text search.
         This enables keyword matching on email subjects and content chunks.
+
+        For new tables, this is called automatically in _create_table().
+        For existing tables without FTS index, hybrid_search() calls this as fallback.
         """
         if self._table is None:
             return
 
-        try:
-            # Check if FTS index already exists
-            self._table.create_fts_index(["subject", "text"])
-        except Exception:
-            # Index may already exist or FTS not available
-            pass
+        # Check if FTS indexes already exist to avoid recreation
+        lance_ds = self._table.to_lance()
+        existing_indices = lance_ds.list_indices()
+        # LanceDB creates "Inverted" type indices for FTS
+        # Each index has a "fields" list with column names; extract first field from each FTS index
+        existing_fts_columns = {idx.get("fields", [None])[0] for idx in existing_indices if idx.get("type") == "Inverted"}
+
+        # Create FTS index for subject column
+        if "subject" not in existing_fts_columns:
+            self._table.create_fts_index("subject")
+
+        # Create FTS index for text column
+        if "text" not in existing_fts_columns:
+            self._table.create_fts_index("text")
 
     def _create_table(self, records: list[ChunkRecord]) -> None:
         if not records:
@@ -119,6 +130,10 @@ class VectorStore:
             mode="create"
         )
         self._enable_auto_cleanup()
+
+        # Create FTS index immediately for fresh tables
+        # This avoids lazy index creation during first hybrid_search query
+        self._ensure_fts_index()
 
     def upsert(self, records: list[ChunkRecord]) -> None:
         if not records:

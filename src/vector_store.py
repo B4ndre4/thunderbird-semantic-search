@@ -14,6 +14,11 @@ from lance.dataset import AutoCleanupConfig
 AUTO_CLEANUP_INTERVAL = 20
 AUTO_CLEANUP_OLDER_THAN_SECONDS = 0
 
+# Hybrid search configuration: pool multiplier for RRF fusion
+# Each search (vector + FTS) retrieves top_n * HYBRID_POOL_MULTIPLIER candidates
+# before fusion. Higher values improve recall at the cost of performance.
+HYBRID_POOL_MULTIPLIER = 2
+
 
 @dataclass
 class ChunkRecord:
@@ -65,6 +70,22 @@ class VectorStore:
                 older_than_seconds=AUTO_CLEANUP_OLDER_THAN_SECONDS,
             )
         )
+
+    def _ensure_fts_index(self) -> None:
+        """Create Full-Text Search index on subject and text columns if not exists.
+
+        LanceDB FTS requires tantivy and creates an inverted index for text search.
+        This enables keyword matching on email subjects and content chunks.
+        """
+        if self._table is None:
+            return
+
+        try:
+            # Check if FTS index already exists
+            self._table.create_fts_index(["subject", "text"])
+        except Exception:
+            # Index may already exist or FTS not available
+            pass
 
     def _create_table(self, records: list[ChunkRecord]) -> None:
         if not records:
@@ -175,6 +196,124 @@ class VectorStore:
                 message_id=results_dict["message_id"][i],
             ))
 
+        return results
+
+    def hybrid_search(
+        self,
+        query_text: str,
+        query_embedding: list[float],
+        top_n: int,
+        lance_filter: str | None
+    ) -> list[SearchResult]:
+        """Perform hybrid search combining vector similarity and full-text search.
+
+        Algorithm:
+        1. Execute vector search and FTS search in parallel (conceptually)
+        2. Retrieve top_k = top_n * HYBRID_POOL_MULTIPLIER from each
+        3. Apply filter BEFORE fusion (filter on candidate pool)
+        4. Merge using Reciprocal Rank Fusion (RRF): score = sum(1/(k+rank))
+        5. Return top_n results sorted by RRF score
+
+        Args:
+            query_text: Raw query text for FTS search
+            query_embedding: Query embedding for vector search
+            top_n: Number of final results to return
+            lance_filter: Optional LanceDB filter expression (applied to both searches)
+
+        Returns:
+            List of SearchResult sorted by RRF relevance score
+        """
+        if self._table is None:
+            return []
+
+        # Ensure FTS index exists
+        self._ensure_fts_index()
+
+        pool_size = top_n * HYBRID_POOL_MULTIPLIER
+
+        # Vector search with filter applied
+        try:
+            vector_query = self._table.search(query_embedding).limit(pool_size)
+            if lance_filter:
+                vector_query = vector_query.where(lance_filter)
+            vector_results = vector_query.to_arrow()
+        except Exception:
+            vector_results = None
+
+        # FTS search with filter applied
+        try:
+            fts_query = self._table.search(query_text, query_type="fts").limit(pool_size)
+            if lance_filter:
+                fts_query = fts_query.where(lance_filter)
+            fts_results = fts_query.to_arrow()
+        except Exception:
+            fts_results = None
+
+        # If one search fails, return results from the other
+        if vector_results is None and fts_results is None:
+            return []
+        elif vector_results is None:
+            return self._results_from_arrow(fts_results, top_n)
+        elif fts_results is None:
+            return self._results_from_arrow(vector_results, top_n)
+
+        # RRF Fusion
+        k = 60  # RRF constant
+        rrf_scores = {}
+
+        # Process vector results (rank starts at 1)
+        vector_dict = vector_results.to_pydict()
+        for rank, chunk_id in enumerate(vector_dict.get("chunk_id", []), 1):
+            if chunk_id not in rrf_scores:
+                rrf_scores[chunk_id] = {
+                    "score": 0,
+                    "data": {key: vector_dict[key][rank-1] for key in vector_dict}
+                }
+            rrf_scores[chunk_id]["score"] += 1.0 / (k + rank)
+
+        # Process FTS results
+        fts_dict = fts_results.to_pydict()
+        for rank, chunk_id in enumerate(fts_dict.get("chunk_id", []), 1):
+            if chunk_id not in rrf_scores:
+                rrf_scores[chunk_id] = {
+                    "score": 0,
+                    "data": {key: fts_dict[key][rank-1] for key in fts_dict}
+                }
+            rrf_scores[chunk_id]["score"] += 1.0 / (k + rank)
+
+        # Sort by RRF score and return top_n
+        sorted_results = sorted(rrf_scores.items(), key=lambda x: x[1]["score"], reverse=True)
+
+        results = []
+        for chunk_id, item in sorted_results[:top_n]:
+            data = item["data"]
+            results.append(SearchResult(
+                content=data.get("text", ""),
+                subject=data.get("subject", ""),
+                date_iso=data.get("date_iso", ""),
+                from_address=data.get("from_address", ""),
+                to_addresses=data.get("to_addresses", ""),
+                message_id=data.get("message_id", ""),
+            ))
+
+        return results
+
+    def _results_from_arrow(self, arrow_table, limit: int) -> list[SearchResult]:
+        """Convert Arrow table to list of SearchResult (fallback helper)."""
+        if arrow_table is None or arrow_table.num_rows == 0:
+            return []
+
+        results_dict = arrow_table.to_pydict()
+        results = []
+        for i in range(min(limit, len(results_dict["text"]))):
+            results.append(SearchResult(
+                content=results_dict["text"][i],
+                subject=results_dict["subject"][i],
+                date_iso=results_dict["date_iso"][i],
+                from_address=results_dict["from_address"][i],
+                to_addresses=results_dict["to_addresses"][i],
+                message_id=results_dict["message_id"][i],
+            ))
         return results
 
     def count(self) -> int:

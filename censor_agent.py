@@ -347,7 +347,11 @@ def process_file(
         records = []
         try:
             for chunk in chunks:
-                embedding = embedder.embed_passage(chunk.text)
+                # Include subject in embedding text to strengthen semantic signal
+                # Format: "Subject: {subject}\n\n{chunk_text}"
+                # This ensures vector search can match queries against both subject and body
+                text_with_subject = f"Subject: {email.subject}\n\n{chunk.text}"
+                embedding = embedder.embed_passage(text_with_subject)
                 chunk_id = f"{email.message_id}__{chunk.chunk_index}"
                 metadata = {
                     "message_id": email.message_id,
@@ -367,7 +371,7 @@ def process_file(
                 }
                 records.append(ChunkRecord(
                     chunk_id=chunk_id,
-                    text=chunk.text,
+                    text=text_with_subject,  # Include subject for consistency with embedding
                     embedding=embedding,
                     metadata=metadata,
                 ))
@@ -560,7 +564,11 @@ def process_retries(
         records = []
         try:
             for chunk in chunks:
-                embedding = embedder.embed_passage(chunk.text)
+                # Include subject in embedding text to strengthen semantic signal
+                # Format: "Subject: {subject}\n\n{chunk_text}"
+                # This ensures vector search can match queries against both subject and body
+                text_with_subject = f"Subject: {email.subject}\n\n{chunk.text}"
+                embedding = embedder.embed_passage(text_with_subject)
                 chunk_id = f"{email.message_id}__{chunk.chunk_index}"
                 metadata = {
                     "message_id": email.message_id,
@@ -580,7 +588,7 @@ def process_retries(
                 }
                 records.append(ChunkRecord(
                     chunk_id=chunk_id,
-                    text=chunk.text,
+                    text=text_with_subject,  # Include subject for consistency with embedding
                     embedding=embedding,
                     metadata=metadata,
                 ))

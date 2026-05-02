@@ -296,7 +296,9 @@ async def handle_search_emails(
 
     try:
         vector_store = resource_manager.vector_store
-        results = vector_store.search(embedding, top_n, filter_expr)
+        # Use hybrid search combining vector similarity and full-text search
+        # This enables matching queries against both subject (FTS) and body (vector)
+        results = vector_store.hybrid_search(query, embedding, top_n, filter_expr)
     except Exception as e:
         logger.error(f"Search failed: {e}")
         return [TextContent(type="text", text=json.dumps({

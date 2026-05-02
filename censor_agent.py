@@ -285,11 +285,11 @@ def process_file(
         first_word = raw_response.strip().split()[0].lower() if raw_response.strip() else ""
 
         label = None
-        if first_word in ("lavoro", "work", "trabajo", "arbeit", "travail"):
+        if first_word in ("lavoro", "lavorativo", "lavorativa", "work", "working", "trabajo", "laboral", "arbeit", "beruflich", "travail", "professionnel", "professionnelle"):
             label = "work"
-        elif first_word in ("privata", "private", "privado", "privat", "privée"):
+        elif first_word in ("privata", "privato", "private", "privado", "privat", "privée", "privé"):
             label = "private"
-        elif first_word in ("mista", "mixed", "mixto", "gemischt", "mixte"):
+        elif first_word in ("mista", "misto", "mixed", "mixto", "mixta", "gemischt", "mixte"):
             label = "mixed"
         else:
             state_db.add_failed_email(mbox_path.name, email.message_id, email.subject, f"Unknown classification: {first_word}")
@@ -508,11 +508,11 @@ def process_retries(
         first_word = raw_response.strip().split()[0].lower() if raw_response.strip() else ""
 
         label = None
-        if first_word in ("lavoro", "work", "trabajo", "arbeit", "travail"):
+        if first_word in ("lavoro", "lavorativo", "lavorativa", "work", "working", "trabajo", "laboral", "arbeit", "beruflich", "travail", "professionnel", "professionnelle"):
             label = "work"
-        elif first_word in ("privata", "private", "privado", "privat", "privée"):
+        elif first_word in ("privata", "privato", "private", "privado", "privat", "privée", "privé"):
             label = "private"
-        elif first_word in ("mista", "mixed", "mixto", "gemischt", "mixte"):
+        elif first_word in ("mista", "misto", "mixed", "mixto", "mixta", "gemischt", "mixte"):
             label = "mixed"
         else:
             errors += 1
